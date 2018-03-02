@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using EncryptedMessageBoard.Models;
 using System.Linq;
+using System;
 
 namespace EncryptedMessageBoard.Controllers
 {
@@ -17,7 +18,7 @@ namespace EncryptedMessageBoard.Controllers
             // Default Message
             if (_context.EncryptedMessages.Count() == 0)
             {
-                _context.EncryptedMessages.Add(new EncryptedMessage { Author = "Nick Curwen", Message = "Thank you for reviewing my application." });
+                _context.EncryptedMessages.Add(new EncryptedMessage("Nick Curwen", "Thank you for reviewing my application."));
                 _context.SaveChanges();
             }
         }
@@ -37,6 +38,19 @@ namespace EncryptedMessageBoard.Controllers
                 return NotFound();
             }
             return new ObjectResult(message);
+        }
+
+        [HttpGet("{id}/decrypt", Name = "GetDecryptedMessage")]
+        public IActionResult GetByIdAndDecrypt(long id)
+        {
+            var message = _context.EncryptedMessages.FirstOrDefault(t => t.Id == id);
+            if (message == null)
+            {
+                return NotFound();
+            }
+
+            String decryptedMessage = $"[{message.TimeStamp}] {message.Author}: {message.DecryptMessage()}";
+            return new ObjectResult(decryptedMessage);
         }
 
         [HttpPost]
@@ -68,7 +82,8 @@ namespace EncryptedMessageBoard.Controllers
             }
 
             message.Author = item.Author;
-            message.Message = item.Message;
+            message.Message = item.DecryptMessage();
+            message.TimeStamp = DateTime.Now.ToString().TrimEnd();
 
             _context.EncryptedMessages.Update(message);
             _context.SaveChanges();
